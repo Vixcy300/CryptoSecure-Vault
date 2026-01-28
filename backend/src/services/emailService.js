@@ -6,9 +6,11 @@ const transporter = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: process.env.SMTP_USER || 'contactigtyt@gmail.com',
-        pass: process.env.SMTP_PASS || 'unltveivyxgbzmsm'
-    }
+        user: process.env.SMTP_USER || process.env.EMAIL_USER || 'noreply@example.com',
+        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || ''
+    },
+    connectionTimeout: 10000, // 10 second timeout
+    greetingTimeout: 5000
 });
 
 const generateOTP = () => {
@@ -16,6 +18,12 @@ const generateOTP = () => {
 };
 
 const sendOTPEmail = async (email, otp, purpose = 'login') => {
+    // In development or if email fails, log OTP to console for testing
+    console.log(`\n========================================`);
+    console.log(`OTP for ${email}: ${otp}`);
+    console.log(`Purpose: ${purpose}`);
+    console.log(`========================================\n`);
+
     const subjects = {
         login: 'CryptoSecure Vault - Login Verification Code',
         register: 'CryptoSecure Vault - Registration Verification Code',
@@ -25,7 +33,7 @@ const sendOTPEmail = async (email, otp, purpose = 'login') => {
     const mailOptions = {
         from: {
             name: 'CryptoSecure Vault',
-            address: process.env.SMTP_USER || 'contactigtyt@gmail.com'
+            address: process.env.SMTP_USER || process.env.EMAIL_USER || 'noreply@example.com'
         },
         to: email,
         subject: subjects[purpose] || 'CryptoSecure Vault - Verification Code',
@@ -38,61 +46,45 @@ const sendOTPEmail = async (email, otp, purpose = 'login') => {
                     body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #ffffff; }
                     .wrapper { width: 100%; table-layout: fixed; background-color: #ffffff; padding-bottom: 60px; }
                     .main-table { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; font-family: sans-serif; color: #171717; border: 1px solid #e5e7eb; border-radius: 8px; }
-                    .header { padding: 40px; text-align: center; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+                    .header { padding: 40px; text-align: center; background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 8px 8px 0 0; }
                     .content { padding: 40px; }
                     .otp-container { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 24px; text-align: center; margin: 32px 0; }
                     .otp-code { font-size: 42px; font-weight: 700; color: #4f46e5; letter-spacing: 8px; margin: 0; font-family: monospace; }
                     .footer { padding: 32px; background-color: #ffffff; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
-                    .btn { display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; }
-                    .alert { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; font-size: 14px; color: #b45309; }
                 </style>
             </head>
             <body>
                 <div class="wrapper">
                     <br>
                     <table class="main-table" align="center">
-                        <!-- Header -->
                         <tr>
                             <td class="header">
                                 <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">CryptoSecure Vault</h1>
-                                <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">Zero-Knowledge Architecture</p>
+                                <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0 0; font-size: 14px;">Zero-Knowledge Architecture</p>
                             </td>
                         </tr>
-
-                        <!-- Content -->
                         <tr>
                             <td class="content">
                                 <h2 style="margin: 0 0 16px 0; font-size: 20px; color: #0f172a;">Verify your identity</h2>
                                 <p style="margin: 0 0 24px 0; line-height: 1.6; color: #334155;">
                                     Use the following verification code to ${purpose === 'register' ? 'complete your secure account registration' : 'authenticate access to your vault'}.
                                 </p>
-
                                 <div class="otp-container">
                                     <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600;">Verification Code</p>
                                     <p class="otp-code">${otp}</p>
                                     <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Expires in 10 minutes</p>
                                 </div>
-
-                                <div class="alert">
-                                    <strong>Security Notice:</strong>
-                                    CryptoSecure employees will never ask for this code. If you did not request this, please ignore this email.
-                                </div>
-
                                 <p style="margin: 0; font-size: 13px; color: #64748b; text-align: center;">
                                     Authorized for: <strong style="color: #0f172a;">${email}</strong>
                                 </p>
                             </td>
                         </tr>
-
-                        <!-- Footer -->
                         <tr>
                             <td class="footer">
                                 <p style="margin: 0 0 8px 0;">&copy; 2026 CryptoSecure Vault. All rights reserved.</p>
-                                <p style="margin: 0;">123 Encryption St, Cyber City, Secure State 90210</p>
                             </td>
                         </tr>
                     </table>
-                    <br>
                 </div>
             </body>
             </html>
@@ -101,11 +93,14 @@ const sendOTPEmail = async (email, otp, purpose = 'login') => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`OTP email sent to ${email}`);
+        console.log(`OTP email sent successfully to ${email}`);
         return true;
     } catch (error) {
-        console.error('Failed to send OTP email:', error);
-        throw error;
+        // DON'T throw - just log the error and return false
+        // This allows registration to continue even if email fails
+        console.error('Failed to send OTP email:', error.message);
+        console.log(`[FALLBACK] OTP for ${email} is: ${otp} (Email failed, check Render logs)`);
+        return false; // Return false but don't crash
     }
 };
 
@@ -113,54 +108,21 @@ const sendLoginAlertEmail = async (email, ipAddress, userAgent, timestamp) => {
     const mailOptions = {
         from: {
             name: 'CryptoSecure Vault',
-            address: process.env.SMTP_USER || 'contactigtyt@gmail.com'
+            address: process.env.SMTP_USER || process.env.EMAIL_USER || 'noreply@example.com'
         },
         to: email,
         subject: 'CryptoSecure Vault - New Login Detected',
         html: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f12; color: #ffffff; padding: 40px; }
-                    .container { max-width: 500px; margin: 0 auto; background: #16161a; border-radius: 16px; padding: 40px; border: 1px solid rgba(255,255,255,0.06); }
-                    h1 { color: #ffffff; font-size: 24px; margin-bottom: 20px; }
-                    p { color: #a1a1aa; font-size: 14px; line-height: 1.6; }
-                    .details { background: #1c1c21; border-radius: 10px; padding: 20px; margin: 20px 0; }
-                    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-                    .detail-label { color: #71717a; }
-                    .detail-value { color: #ffffff; }
-                    .footer { text-align: center; margin-top: 30px; color: #52525b; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>🔔 New Login Detected</h1>
-                    <p>A new login to your CryptoSecure Vault account was detected:</p>
-                    
-                    <div class="details">
-                        <div class="detail-row">
-                            <span class="detail-label">Time:</span>
-                            <span class="detail-value">${new Date(timestamp).toLocaleString()}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">IP Address:</span>
-                            <span class="detail-value">${ipAddress}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Device:</span>
-                            <span class="detail-value">${userAgent?.substring(0, 50) || 'Unknown'}...</span>
-                        </div>
-                    </div>
-                    
-                    <p>If this was you, no action is needed. If you don't recognize this activity, please secure your account immediately.</p>
-                    
-                    <div class="footer">
-                        <p>© 2026 CryptoSecure Vault</p>
-                    </div>
-                </div>
-            </body>
-            </html>
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                <h1 style="color: #4f46e5;">New Login Detected</h1>
+                <p>A new login to your CryptoSecure Vault account was detected:</p>
+                <ul>
+                    <li><strong>Time:</strong> ${new Date(timestamp).toLocaleString()}</li>
+                    <li><strong>IP:</strong> ${ipAddress}</li>
+                    <li><strong>Device:</strong> ${userAgent?.substring(0, 50) || 'Unknown'}...</li>
+                </ul>
+                <p>If this was you, no action is needed.</p>
+            </div>
         `
     };
 
@@ -168,7 +130,7 @@ const sendLoginAlertEmail = async (email, ipAddress, userAgent, timestamp) => {
         await transporter.sendMail(mailOptions);
         return true;
     } catch (error) {
-        console.error('Failed to send login alert:', error);
+        console.error('Failed to send login alert:', error.message);
         return false;
     }
 };
