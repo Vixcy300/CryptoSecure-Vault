@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { logAction } = require('../utils/blockchain');
-const { Op } = require('sequelize');
 
 // Directory to store encrypted blobs
 const UPLOAD_DIR = path.join(__dirname, '../../uploads');

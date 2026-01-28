@@ -4,7 +4,6 @@ const AuditLog = require('../models/AuditLog');
 const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 const { generateOTP, sendOTPEmail, sendLoginAlertEmail } = require('../services/emailService');
-const { Op } = require('sequelize');
 
 // Step 1: Register - Create pending user and send OTP
 const register = async (req, res) => {
@@ -12,7 +11,7 @@ const register = async (req, res) => {
         const { username, email, password, panicPassword, publicKey } = req.body;
 
         // Check if user exists
-        const existingUser = await User.findOne({ where: { email } });
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
         }
@@ -22,7 +21,7 @@ const register = async (req, res) => {
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         // Delete any existing OTPs for this email
-        await OTP.destroy({ where: { email } });
+        await OTP.deleteMany({ email });
 
         // Create new OTP
         await OTP.create({
@@ -32,8 +31,7 @@ const register = async (req, res) => {
             expiresAt
         });
 
-        // Store pending registration data temporarily in session/memory
-        // For simplicity, we'll include it in the response and client will send it back
+        // Hash passwords
         const hashedPassword = await argon2.hash(password, { type: argon2.argon2id });
         const hashedPanicPassword = panicPassword
             ? await argon2.hash(panicPassword, { type: argon2.argon2id })
@@ -65,12 +63,10 @@ const verifyRegisterOTP = async (req, res) => {
         const { email, otp, pendingData } = req.body;
 
         const otpRecord = await OTP.findOne({
-            where: {
-                email,
-                purpose: 'register',
-                verified: false,
-                expiresAt: { [Op.gt]: new Date() }
-            }
+            email,
+            purpose: 'register',
+            verified: false,
+            expiresAt: { $gt: new Date() }
         });
 
         if (!otpRecord) {
@@ -82,7 +78,8 @@ const verifyRegisterOTP = async (req, res) => {
         }
 
         if (otpRecord.code !== otp) {
-            await otpRecord.update({ attempts: otpRecord.attempts + 1 });
+            otpRecord.attempts += 1;
+            await otpRecord.save();
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
@@ -98,11 +95,12 @@ const verifyRegisterOTP = async (req, res) => {
         });
 
         // Mark OTP as verified
-        await otpRecord.update({ verified: true });
+        otpRecord.verified = true;
+        await otpRecord.save();
 
         // Log the registration
         await AuditLog.create({
-            userId: user.id,
+            userId: user._id,
             action: 'user_register',
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'],
@@ -121,7 +119,7 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -130,7 +128,6 @@ const login = async (req, res) => {
         const validPassword = await argon2.verify(user.password, password);
 
         if (!validPassword) {
-            // Check if it's the panic password
             if (user.panicPasswordHash) {
                 const validPanic = await argon2.verify(user.panicPasswordHash, password);
                 if (validPanic) {
@@ -143,48 +140,33 @@ const login = async (req, res) => {
             }
         }
 
-        // Logic Refined:
-        // 1. If Panic Mode -> Direct Login (Privacy reasons, don't trigger 2FA which might alert attacker)
-        // 2. If 2FA Enabled -> Send OTP
-        // 3. If 2FA Disabled -> Direct Login
-
         if (isPanicMode || !user.twoFactorEnabled) {
-            // Direct Login Step
             const token = jwt.sign(
-                { id: user.id, role: user.role, email: user.email, isPanicMode },
+                { id: user._id, role: user.role, email: user.email, isPanicMode },
                 process.env.JWT_SECRET || 'super_secret_key_change_me',
                 { expiresIn: '24h' }
             );
 
-            await user.update({ lastLoginAt: new Date() });
+            user.lastLoginAt = new Date();
+            await user.save();
 
-            // Log the login
-            // For panic mode, we mask it. For normal login, we log it.
             await AuditLog.create({
-                userId: user.id,
+                userId: user._id,
                 action: 'user_login',
-                metadata: {
-                    skipOTP: true,
-                    panic: isPanicMode // You might want to hide this in prod logs if logs are compromised
-                },
+                metadata: { skipOTP: true, panic: isPanicMode },
                 ipAddress: req.ip,
                 userAgent: req.headers['user-agent'],
                 success: true
             });
 
-            // Send Login Alert (Only if NOT panic mode and Alerts are ENABLED)
-            // We usually don't want alerts in panic mode to look different, 
-            // but for safety, we might silence them or send a generic one.
-            // Current requirement: "Make notifications work".
             if (user.loginAlertsEnabled && !isPanicMode) {
-                // Send asynchronously
                 sendLoginAlertEmail(email, req.ip, req.headers['user-agent'], new Date()).catch(err => console.error('Alert failed', err));
             }
 
             return res.json({
                 token,
                 user: {
-                    id: user.id,
+                    id: user._id,
                     username: user.username,
                     email: user.email,
                     role: user.role,
@@ -195,12 +177,11 @@ const login = async (req, res) => {
             });
         }
 
-        // If we are here: 2FA is ENABLED and it is NOT panic mode.
-        // Generate and send OTP for new session
+        // 2FA is ENABLED - send OTP
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        await OTP.destroy({ where: { email } });
+        await OTP.deleteMany({ email });
         await OTP.create({
             email,
             code: otp,
@@ -214,7 +195,7 @@ const login = async (req, res) => {
         res.status(200).json({
             message: 'OTP sent to your email',
             email,
-            userId: user.id,
+            userId: user._id,
             requiresOTP: true
         });
     } catch (error) {
@@ -228,18 +209,16 @@ const verifyLoginOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'User not found' });
         }
 
         const otpRecord = await OTP.findOne({
-            where: {
-                email,
-                purpose: 'login',
-                verified: false,
-                expiresAt: { [Op.gt]: new Date() }
-            }
+            email,
+            purpose: 'login',
+            verified: false,
+            expiresAt: { $gt: new Date() }
         });
 
         if (!otpRecord) {
@@ -251,27 +230,27 @@ const verifyLoginOTP = async (req, res) => {
         }
 
         if (otpRecord.code !== otp) {
-            await otpRecord.update({ attempts: otpRecord.attempts + 1 });
+            otpRecord.attempts += 1;
+            await otpRecord.save();
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
-        // Check for panic mode in metadata
         const isPanicMode = otpRecord.metadata?.panic || false;
 
-        // OTP is valid - create session
         const token = jwt.sign(
-            { id: user.id, role: user.role, email: user.email, isPanicMode },
+            { id: user._id, role: user.role, email: user.email, isPanicMode },
             process.env.JWT_SECRET || 'super_secret_key_change_me',
             { expiresIn: '24h' }
         );
 
-        // Mark OTP as verified and update last login
-        await otpRecord.update({ verified: true });
-        await user.update({ lastLoginAt: new Date() });
+        otpRecord.verified = true;
+        await otpRecord.save();
 
-        // Log the login
+        user.lastLoginAt = new Date();
+        await user.save();
+
         await AuditLog.create({
-            userId: user.id,
+            userId: user._id,
             action: 'user_login',
             metadata: { withOTP: true },
             ipAddress: req.ip,
@@ -279,13 +258,12 @@ const verifyLoginOTP = async (req, res) => {
             success: true
         });
 
-        // Send login alert email
-        sendLoginAlertEmail(email, req.ip, req.headers['user-agent'], new Date());
+        sendLoginAlertEmail(email, req.ip, req.headers['user-agent'], new Date()).catch(err => console.error('Alert failed'));
 
         res.json({
             token,
             user: {
-                id: user.id,
+                id: user._id,
                 username: user.username,
                 email: user.email,
                 role: user.role,
@@ -308,7 +286,7 @@ const resendOTP = async (req, res) => {
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        await OTP.destroy({ where: { email } });
+        await OTP.deleteMany({ email });
         await OTP.create({
             email,
             code: otp,
@@ -325,45 +303,38 @@ const resendOTP = async (req, res) => {
     }
 };
 
-// Delete Account - Permanently delete user and all data
+// Delete Account
 const deleteAccount = async (req, res) => {
     try {
         const userId = req.user.id;
         const { password } = req.body;
 
-        // Verify password before deletion
-        const user = await User.findByPk(userId);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         if (password) {
-            const valid = await argon2.verify(user.passwordHash, password);
+            const valid = await argon2.verify(user.password, password);
             if (!valid) {
                 return res.status(401).json({ message: 'Invalid password' });
             }
         }
 
-        // Delete user files from database
         const File = require('../models/File');
-        await File.destroy({ where: { userId } });
-
-        // Delete file permissions
         const FilePermission = require('../models/FilePermission');
-        await FilePermission.destroy({ where: { userId } });
 
-        // Delete OTPs
-        await OTP.destroy({ where: { email: user.email } });
+        await File.deleteMany({ ownerId: userId });
+        await FilePermission.deleteMany({ userId });
+        await OTP.deleteMany({ email: user.email });
 
-        // Log account deletion
         await AuditLog.create({
             userId,
             action: 'account_deleted',
             success: true
         });
 
-        // Delete user
-        await user.destroy();
+        await User.deleteOne({ _id: userId });
 
         res.status(200).json({ message: 'Account deleted successfully' });
     } catch (error) {
@@ -372,47 +343,30 @@ const deleteAccount = async (req, res) => {
     }
 };
 
-// Export User Data - Download all user data
+// Export User Data
 const exportUserData = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Get user info
-        const user = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'email', 'createdAt', 'lastLoginAt', 'twoFactorEnabled']
-        });
-
+        const user = await User.findById(userId).select('_id username email createdAt lastLoginAt twoFactorEnabled');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Get user files
         const File = require('../models/File');
-        const files = await File.findAll({
-            where: { userId },
-            attributes: ['id', 'filename', 'size', 'mimeType', 'createdAt', 'updatedAt']
-        });
+        const files = await File.find({ ownerId: userId }).select('_id filename size mimeType createdAt updatedAt');
 
-        // Get activity logs
-        const logs = await AuditLog.findAll({
-            where: { userId },
-            order: [['createdAt', 'DESC']],
-            limit: 100
-        });
+        const logs = await AuditLog.find({ userId }).sort({ createdAt: -1 }).limit(100);
 
-        // Get file permissions (shared files)
         const FilePermission = require('../models/FilePermission');
-        const permissions = await FilePermission.findAll({
-            where: { userId },
-            include: [{ model: File, attributes: ['filename'] }]
-        });
+        const permissions = await FilePermission.find({ userId });
 
         const exportData = {
             exportDate: new Date().toISOString(),
-            user: user.toJSON(),
-            files: files.map(f => f.toJSON()),
-            activityLogs: logs.map(l => l.toJSON()),
-            sharedWithMe: permissions.map(p => p.toJSON()),
+            user: user.toObject(),
+            files: files.map(f => f.toObject()),
+            activityLogs: logs.map(l => l.toObject()),
+            sharedWithMe: permissions.map(p => p.toObject()),
             metadata: {
                 totalFiles: files.length,
                 totalLogs: logs.length,
@@ -420,7 +374,6 @@ const exportUserData = async (req, res) => {
             }
         };
 
-        // Log export action
         await AuditLog.create({
             userId,
             action: 'data_exported',
@@ -441,19 +394,20 @@ const updatePanicPassword = async (req, res) => {
         const userId = req.user.id;
         const { panicPassword } = req.body;
 
-        const user = await User.findByPk(userId);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         if (!panicPassword) {
-            // Remove panic password
-            await user.update({ panicPasswordHash: null });
+            user.panicPasswordHash = null;
+            await user.save();
             return res.status(200).json({ message: 'Panic mode disabled' });
         }
 
         const hashedPanicPassword = await argon2.hash(panicPassword, { type: argon2.argon2id });
-        await user.update({ panicPasswordHash: hashedPanicPassword });
+        user.panicPasswordHash = hashedPanicPassword;
+        await user.save();
 
         await AuditLog.create({
             userId,
@@ -473,7 +427,7 @@ const updateSecuritySettings = async (req, res) => {
         const userId = req.user.id;
         const { twoFactorEnabled, loginAlertsEnabled } = req.body;
 
-        const user = await User.findByPk(userId);
+        const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
@@ -499,4 +453,3 @@ const updateSecuritySettings = async (req, res) => {
 };
 
 module.exports = { register, verifyRegisterOTP, login, verifyLoginOTP, resendOTP, deleteAccount, exportUserData, updatePanicPassword, updateSecuritySettings };
-

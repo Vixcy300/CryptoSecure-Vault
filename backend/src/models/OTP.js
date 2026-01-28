@@ -1,43 +1,16 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const OTP = sequelize.define('OTP', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-    },
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    code: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    purpose: {
-        type: DataTypes.ENUM('login', 'register', '2fa'),
-        defaultValue: 'login'
-    },
-    expiresAt: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
-    verified: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    },
-    attempts: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
-    },
-    metadata: {
-        type: DataTypes.JSON, // For storing panic mode flag etc.
-        allowNull: true
-    }
-}, {
-    tableName: 'otps',
-    timestamps: true
-});
+const otpSchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    code: { type: String, required: true },
+    purpose: { type: String, enum: ['login', 'register', '2fa'], default: 'login' },
+    expiresAt: { type: Date, required: true },
+    verified: { type: Boolean, default: false },
+    attempts: { type: Number, default: 0 },
+    metadata: { type: Object } // For storing panic mode flag etc.
+}, { timestamps: true });
 
-module.exports = OTP;
+// Auto-expire documents after expiresAt
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+module.exports = mongoose.model('OTP', otpSchema);

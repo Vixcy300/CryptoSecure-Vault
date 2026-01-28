@@ -1,17 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
 const AuditLog = require('../models/AuditLog');
 const { authenticateToken } = require('../middleware/auth');
 
 // Get activity logs for current user
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const logs = await AuditLog.findAll({
-            where: { userId: req.user.id },
-            order: [['createdAt', 'DESC']],
-            limit: 50
-        });
+        const logs = await AuditLog.find({ userId: req.user.id })
+            .sort({ createdAt: -1 })
+            .limit(50);
         res.json(logs);
     } catch (error) {
         console.error('Error fetching logs:', error);
@@ -27,7 +24,7 @@ router.post('/', authenticateToken, async (req, res) => {
             userId: req.user.id,
             action,
             metadata: metadata || {},
-            ipAddress: req.ip || req.connection.remoteAddress,
+            ipAddress: req.ip || req.connection?.remoteAddress,
             userAgent: req.headers['user-agent'],
             success: true
         });
