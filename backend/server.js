@@ -14,17 +14,29 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS Configuration
+const corsOptions = {
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://crypto-secure-vault.vercel.app',
+        'https://crypto-secure-vault-f5z9lfcm2-vixcy300s-projects.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:3000", "https://your-vercel-app.vercel.app"], // Add production domain later
-        methods: ["GET", "POST"]
-    }
+    cors: corsOptions
 });
 
 // Security Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
+
 
 // Rate Limiting
 const limiter = rateLimit({
