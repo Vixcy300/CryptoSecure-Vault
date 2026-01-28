@@ -14,9 +14,8 @@ const checkPermission = (requiredPermissions) => {
                 return res.status(400).json({ message: 'File ID is required' });
             }
 
-            const permission = await FilePermission.findOne({
-                where: { fileId, userId }
-            });
+            // Mongoose query (not Sequelize)
+            const permission = await FilePermission.findOne({ fileId, userId });
 
             if (!permission) {
                 return res.status(403).json({ message: 'Access denied: No permissions found for this file' });

@@ -4,31 +4,26 @@ const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const { logAction } = require('../utils/blockchain');
 
 // Directory to store encrypted blobs
 const UPLOAD_DIR = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR);
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
 const uploadFile = async (req, res) => {
     try {
-        // req.file is the encrypted blob from client
-        // req.body contains encryptedMetadata, iv, checksum, encryptedKey (for the owner)
         const { encryptedName, encryptedMetadata, iv, checksum, encryptedKey } = req.body;
-        const userId = req.user.id; // From auth middleware
+        const userId = req.user.id;
 
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        const fileId = uuidv4();
-        const blobPath = req.file.path; // Multer stores it
+        const blobPath = req.file.path;
 
         // Create File Entry
         const newFile = await File.create({
-            id: fileId,
             ownerId: userId,
             encryptedName,
             encryptedMetadata,
@@ -39,19 +34,17 @@ const uploadFile = async (req, res) => {
 
         // Create Permission for Owner
         await FilePermission.create({
-            fileId: newFile.id,
+            fileId: newFile._id,
             userId: userId,
-            encryptedKey: encryptedKey, // Client encrypts key with Owner's PubKey
+            encryptedKey: encryptedKey,
             permission: 'owner'
         });
 
-        // Log to Blockchain
-        await logAction(userId, 'UPLOAD_FILE', newFile.id);
-
-        res.status(201).json({ message: 'File uploaded successfully', fileId: newFile.id });
+        console.log(`File uploaded: ${newFile._id} by user ${userId}`);
+        res.status(201).json({ message: 'File uploaded successfully', fileId: newFile._id });
 
     } catch (error) {
-        console.error(error);
+        console.error('Upload error:', error);
         res.status(500).json({ message: 'Server error during upload' });
     }
 };
@@ -60,28 +53,24 @@ const getFiles = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // PANIC MODE CHECK (Server-Side Enforcement)
+        // PANIC MODE CHECK
         if (req.user.isPanicMode) {
-            return res.json([]); // Return empty list to simulate empty vault
+            return res.json([]);
         }
 
-        // Find files where user has permission
-        const permissions = await FilePermission.findAll({
-            where: { userId },
-            include: [{ model: File }]
-        });
+        // Find all permissions for this user and populate file data
+        const permissions = await FilePermission.find({ userId }).populate('fileId');
 
-        // Advanced query: Get files and check if they are shared with others
         const files = await Promise.all(permissions.map(async p => {
+            if (!p.fileId) return null; // Skip if file was deleted
+
             let isShared = false;
             let sharedWithCount = 0;
 
             if (p.permission === 'owner') {
-                const otherPerms = await FilePermission.count({
-                    where: {
-                        fileId: p.File.id,
-                        userId: { [Op.ne]: userId }
-                    }
+                const otherPerms = await FilePermission.countDocuments({
+                    fileId: p.fileId._id,
+                    userId: { $ne: userId }
                 });
                 if (otherPerms > 0) {
                     isShared = true;
@@ -90,21 +79,21 @@ const getFiles = async (req, res) => {
             }
 
             return {
-                id: p.File.id,
-                encryptedName: p.File.encryptedName,
-                encryptedMetadata: p.File.encryptedMetadata,
+                id: p.fileId._id,
+                encryptedName: p.fileId.encryptedName,
+                encryptedMetadata: p.fileId.encryptedMetadata,
                 permission: p.permission,
-                updatedAt: p.File.updatedAt,
-                iv: p.File.iv,
+                updatedAt: p.fileId.updatedAt,
+                iv: p.fileId.iv,
                 encryptedKey: p.encryptedKey,
                 isShared,
                 sharedWithCount
             };
         }));
 
-        res.json(files);
+        res.json(files.filter(f => f !== null));
     } catch (error) {
-        console.error(error);
+        console.error('Get files error:', error);
         res.status(500).json({ message: 'Server error retrieving files' });
     }
 };
@@ -116,66 +105,63 @@ const shareFile = async (req, res) => {
 
         // Verify owner permission
         const ownerPerm = await FilePermission.findOne({
-            where: { fileId, userId: ownerId, permission: 'owner' }
+            fileId,
+            userId: ownerId,
+            permission: 'owner'
         });
 
         if (!ownerPerm) {
             return res.status(403).json({ message: 'Only owner can share files' });
         }
 
-        const targetUser = await User.findOne({ where: { email: targetEmail } });
+        const targetUser = await User.findOne({ email: targetEmail });
         if (!targetUser) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Check if already shared
         const existingPerm = await FilePermission.findOne({
-            where: { fileId, userId: targetUser.id }
+            fileId,
+            userId: targetUser._id
         });
 
         if (existingPerm) {
-            // Update permission?
             return res.status(400).json({ message: 'File already shared with user' });
         }
 
         await FilePermission.create({
             fileId,
-            userId: targetUser.id,
+            userId: targetUser._id,
             encryptedKey: encryptedKeyForTarget,
             permission: permission || 'read'
         });
 
-        // Log to Blockchain
-        await logAction(ownerId, 'SHARE_FILE', fileId + ':' + targetUser.id);
-
+        console.log(`File ${fileId} shared with ${targetEmail}`);
         res.json({ message: 'File shared successfully' });
 
     } catch (error) {
-        console.error(error);
+        console.error('Share error:', error);
         res.status(500).json({ message: 'Server error during share' });
     }
 };
 
-const storageService = require('../services/storageService');
-
 const downloadFile = async (req, res) => {
     try {
         const fileId = req.params.id;
-        const file = await File.findByPk(fileId);
+        const file = await File.findById(fileId);
 
         if (!file) {
-            return res.status(404).json({ message: 'File not found on database' });
+            return res.status(404).json({ message: 'File not found' });
         }
 
-        const absolutePath = storageService.resolvePath(file.blobPath);
-        if (!fs.existsSync(absolutePath)) {
+        if (!fs.existsSync(file.blobPath)) {
             return res.status(404).json({ message: 'File not found on disk' });
         }
 
-        await logAction(req.user.id, 'DOWNLOAD_FILE', fileId);
-        res.download(absolutePath, `encrypted_${fileId.slice(0, 8)}.enc`);
+        console.log(`File downloaded: ${fileId}`);
+        res.download(file.blobPath, `encrypted_${fileId.toString().slice(0, 8)}.enc`);
     } catch (error) {
-        console.error(error);
+        console.error('Download error:', error);
         res.status(500).json({ message: 'Server error during download' });
     }
 };
@@ -183,21 +169,19 @@ const downloadFile = async (req, res) => {
 const viewFile = async (req, res) => {
     try {
         const fileId = req.params.id;
-        const file = await File.findByPk(fileId);
+        const file = await File.findById(fileId);
 
         if (!file) {
-            return res.status(404).json({ message: 'File not found on database' });
+            return res.status(404).json({ message: 'File not found' });
         }
 
-        const absolutePath = storageService.resolvePath(file.blobPath);
-        if (!fs.existsSync(absolutePath)) {
+        if (!fs.existsSync(file.blobPath)) {
             return res.status(404).json({ message: 'File not found on disk' });
         }
 
-        await logAction(req.user.id, 'VIEW_FILE', fileId);
-        res.sendFile(absolutePath);
+        res.sendFile(file.blobPath);
     } catch (error) {
-        console.error(error);
+        console.error('View error:', error);
         res.status(500).json({ message: 'Server error during view' });
     }
 };
@@ -207,37 +191,36 @@ const deleteFile = async (req, res) => {
         const fileId = req.params.id;
         const userId = req.user.id;
 
-        // Check Permissions First
-        const permission = await FilePermission.findOne({
-            where: { fileId, userId }
-        });
+        // Check Permissions
+        const permission = await FilePermission.findOne({ fileId, userId });
 
         if (!permission) {
             return res.status(404).json({ message: 'File not found or access denied' });
         }
 
         if (permission.permission !== 'owner') {
-            return res.status(403).json({ message: 'Access denied: Only the owner can delete this file' });
+            return res.status(403).json({ message: 'Only the owner can delete this file' });
         }
 
-        const file = await File.findByPk(fileId);
+        const file = await File.findById(fileId);
         if (!file) {
-            // Edge case: Permission exists but file doesn't? Cleanup permission.
-            await FilePermission.destroy({ where: { fileId } });
+            await FilePermission.deleteMany({ fileId });
             return res.status(404).json({ message: 'File record not found' });
         }
 
-        // Module handles disk removal
-        await storageService.deleteFile(file.blobPath);
+        // Delete from disk
+        if (fs.existsSync(file.blobPath)) {
+            fs.unlinkSync(file.blobPath);
+        }
 
-        // Delete ALL permissions (cascade) and entry
-        await FilePermission.destroy({ where: { fileId } });
-        await file.destroy();
+        // Delete permissions and file
+        await FilePermission.deleteMany({ fileId });
+        await File.deleteOne({ _id: fileId });
 
-        await logAction(userId, 'DELETE_FILE', fileId);
+        console.log(`File deleted: ${fileId}`);
         res.json({ message: 'File deleted successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('Delete error:', error);
         res.status(500).json({ message: 'Server error during delete' });
     }
 };
