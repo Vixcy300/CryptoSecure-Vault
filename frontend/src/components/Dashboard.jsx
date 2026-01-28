@@ -43,7 +43,7 @@ const Dashboard = () => {
     const fetchFiles = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/files', {
+            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/files', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setFiles(res.data);
@@ -55,7 +55,7 @@ const Dashboard = () => {
     const fetchActivityLogs = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/logs', {
+            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/logs', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

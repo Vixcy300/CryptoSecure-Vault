@@ -63,7 +63,7 @@ const SettingsPage = () => {
             try {
                 const token = localStorage.getItem('token');
                 const axios = (await import('axios')).default;
-                await axios.put('http://localhost:5000/api/auth/update-panic',
+                await axios.put('https://cryptosecure-vault-backend.onrender.com/api/auth/update-panic',
                     { panicPassword: formData.panicPassword },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
@@ -83,7 +83,7 @@ const SettingsPage = () => {
         try {
             const token = localStorage.getItem('token');
             const axios = (await import('axios')).default;
-            const response = await axios.get('http://localhost:5000/api/auth/export-data', {
+            const response = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/auth/export-data', {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
@@ -118,7 +118,7 @@ const SettingsPage = () => {
 
             const token = localStorage.getItem('token');
             const axios = (await import('axios')).default;
-            await axios.delete('http://localhost:5000/api/auth/delete-account', {
+            await axios.delete('https://cryptosecure-vault-backend.onrender.com/api/auth/delete-account', {
                 headers: { Authorization: `Bearer ${token}` },
                 data: { password: formData.currentPassword }
             });
@@ -313,7 +313,7 @@ const SettingsPage = () => {
                                                     try {
                                                         const token = localStorage.getItem('token');
                                                         const axios = (await import('axios')).default;
-                                                        await axios.put('http://localhost:5000/api/auth/update-security',
+                                                        await axios.put('https://cryptosecure-vault-backend.onrender.com/api/auth/update-security',
                                                             { twoFactorEnabled: newVal },
                                                             { headers: { Authorization: `Bearer ${token}` } }
                                                         );
@@ -346,7 +346,7 @@ const SettingsPage = () => {
                                                     try {
                                                         const token = localStorage.getItem('token');
                                                         const axios = (await import('axios')).default;
-                                                        await axios.put('http://localhost:5000/api/auth/update-security',
+                                                        await axios.put('https://cryptosecure-vault-backend.onrender.com/api/auth/update-security',
                                                             { loginAlertsEnabled: newVal },
                                                             { headers: { Authorization: `Bearer ${token}` } }
                                                         );
