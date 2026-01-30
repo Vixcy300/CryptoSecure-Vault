@@ -20,10 +20,18 @@ import BinaryVisualizer from '../components/BinaryVisualizer';
 
 const SteganographyPage = () => {
     const { colors, isDark } = useTheme();
-    const [activeTab, setActiveTab] = useState('hide'); // 'hide' | 'extract'
+    const [activeTab, setActiveTab] = useState('hide');
     const [user] = useState(JSON.parse(localStorage.getItem('user')));
-    const [visualIntensity, setVisualIntensity] = useState(0); // 0 = idle, 1 = max load
-    const styles = getStyles(colors, isDark);
+    const [visualIntensity, setVisualIntensity] = useState(0);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     return (
         <div style={styles.layout}>
@@ -336,7 +344,7 @@ const ExtractDataPanel = ({ styles, colors }) => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -344,15 +352,15 @@ const getStyles = (colors, isDark) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
     },
-    header: { marginBottom: '32px' },
-    pageTitle: { fontSize: '28px', fontWeight: '700', color: colors.text, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' },
+    header: { marginBottom: '24px' },
+    pageTitle: { fontSize: isMobile ? '20px' : '28px', fontWeight: '700', color: colors.text, marginBottom: '4px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' },
     versionBadge: { fontSize: '12px', background: colors.accentBg, color: colors.accent, padding: '2px 8px', borderRadius: '12px' },
-    pageSubtitle: { fontSize: '14px', color: colors.textSecondary },
+    pageSubtitle: { fontSize: isMobile ? '12px' : '14px', color: colors.textSecondary },
 
-    gridContainer: { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '32px', alignItems: 'start' },
+    gridContainer: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: isMobile ? '20px' : '32px', alignItems: 'start' },
 
     controlPane: { background: colors.cardBg, borderRadius: '16px', border: `1px solid ${colors.border}`, padding: '24px', boxShadow: !isDark && '0 4px 12px rgba(0,0,0,0.05)' },
     tabContainer: { display: 'flex', gap: '12px', marginBottom: '24px', background: colors.inputBg, padding: '4px', borderRadius: '12px' },

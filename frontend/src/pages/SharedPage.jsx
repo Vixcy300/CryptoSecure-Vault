@@ -22,9 +22,16 @@ const SharedPage = () => {
     const { colors, isDark } = useTheme();
     const [user, setUser] = useState(null);
     const [sharedFiles, setSharedFiles] = useState([]);
-    const [tab, setTab] = useState('shared-with-me'); // 'shared-with-me' | 'shared-by-me'
+    const [tab, setTab] = useState('shared-with-me');
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors, isDark);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -297,7 +304,7 @@ const SharedPage = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -305,14 +312,14 @@ const getStyles = (colors, isDark) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
     },
     header: {
         marginBottom: '24px',
     },
     pageTitle: {
-        fontSize: '28px',
+        fontSize: isMobile ? '22px' : '28px',
         fontWeight: '700',
         color: colors.text,
         marginBottom: '4px',

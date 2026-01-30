@@ -9,11 +9,18 @@ import { fromBase64 } from '../utils/base64';
 
 const SecurityVerifier = () => {
     const { colors, isDark } = useTheme();
-    const [activeTab, setActiveTab] = useState('zkp'); // zkp, encryption, rbac
+    const [activeTab, setActiveTab] = useState('zkp');
     const [logs, setLogs] = useState([]);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // ZKP State
-    const [zkpStatus, setZkpStatus] = useState('idle'); // idle, generating, verifying, success, error
+    const [zkpStatus, setZkpStatus] = useState('idle');
     const [zkpData, setZkpData] = useState(null);
 
     // Encryption State
@@ -132,12 +139,13 @@ const SecurityVerifier = () => {
             marginBottom: '2rem'
         },
         title: {
-            fontSize: '2rem',
+            fontSize: isMobile ? '1.4rem' : '2rem',
             fontWeight: 'bold',
             marginBottom: '0.5rem',
             display: 'flex',
+            flexWrap: 'wrap',
             alignItems: 'center',
-            gap: '1rem'
+            gap: isMobile ? '0.5rem' : '1rem'
         },
         badge: {
             backgroundColor: colors.accent,
@@ -153,19 +161,20 @@ const SecurityVerifier = () => {
             borderBottom: `1px solid ${colors.border}`
         },
         tab: (active) => ({
-            padding: '1rem 2rem',
+            padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
             cursor: 'pointer',
             borderBottom: active ? `2px solid ${colors.accent}` : 'none',
             color: active ? colors.accent : colors.textMuted,
             fontWeight: active ? 'bold' : 'normal',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            fontSize: isMobile ? '0.8rem' : '1rem'
         }),
         grid: {
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '2rem'
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? '1rem' : '2rem'
         },
         panel: {
             backgroundColor: isDark ? '#1a1b26' : '#fff',

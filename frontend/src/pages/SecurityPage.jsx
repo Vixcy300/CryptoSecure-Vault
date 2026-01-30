@@ -33,8 +33,15 @@ const SecurityPage = () => {
     const [sessions, setSessions] = useState([
         { id: 1, device: 'Chrome on Windows', ip: '192.168.1.xxx', location: 'Current Session', active: true },
     ]);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors, isDark);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -328,26 +335,26 @@ const SecurityPage = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: { display: 'flex', minHeight: '100vh', background: colors.bg },
-    main: { flex: 1, marginLeft: '260px', padding: '32px 40px' },
-    header: { marginBottom: '32px' },
-    pageTitle: { fontSize: '28px', fontWeight: '700', color: colors.text, marginBottom: '4px' },
-    pageSubtitle: { fontSize: '14px', color: colors.textSecondary },
+    main: { flex: 1, marginLeft: isMobile ? 0 : '260px', padding: isMobile ? '76px 16px 24px 16px' : '32px 40px' },
+    header: { marginBottom: '24px' },
+    pageTitle: { fontSize: isMobile ? '22px' : '28px', fontWeight: '700', color: colors.text, marginBottom: '4px' },
+    pageSubtitle: { fontSize: isMobile ? '13px' : '14px', color: colors.textSecondary },
     successBanner: { display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: colors.successBg, border: `1px solid ${colors.success}33`, borderRadius: '10px', color: colors.success, fontSize: '14px', marginBottom: '20px' },
     errorBanner: { display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: colors.dangerBg, border: `1px solid ${colors.danger}33`, borderRadius: '10px', color: colors.danger, fontSize: '14px', marginBottom: '20px' },
-    scoreCard: { background: isDark ? 'linear-gradient(135deg, #16161a 0%, #1a1a24 100%)' : '#ffffff', borderRadius: '16px', padding: '32px', border: `1px solid ${colors.border}`, marginBottom: '24px', boxShadow: !isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none' },
-    scoreInfo: { display: 'flex', alignItems: 'center', gap: '40px' },
-    scoreCircle: { position: 'relative', width: '120px', height: '120px' },
+    scoreCard: { background: isDark ? 'linear-gradient(135deg, #16161a 0%, #1a1a24 100%)' : '#ffffff', borderRadius: '16px', padding: isMobile ? '20px' : '32px', border: `1px solid ${colors.border}`, marginBottom: '24px', boxShadow: !isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none' },
+    scoreInfo: { display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'center' : 'center', gap: isMobile ? '20px' : '40px', textAlign: isMobile ? 'center' : 'left' },
+    scoreCircle: { position: 'relative', width: isMobile ? '100px' : '120px', height: isMobile ? '100px' : '120px' },
     scoreValue: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-    scoreNumber: { fontSize: '32px', fontWeight: '700' },
+    scoreNumber: { fontSize: isMobile ? '26px' : '32px', fontWeight: '700' },
     scoreLabel: { fontSize: '12px', color: colors.textMuted },
     scoreDetails: { flex: 1 },
-    scoreTitle: { fontSize: '20px', fontWeight: '600', color: colors.text, marginBottom: '8px' },
-    scoreDesc: { fontSize: '14px', color: colors.textSecondary, marginBottom: '16px' },
-    scoreStats: { display: 'flex', gap: '20px' },
+    scoreTitle: { fontSize: isMobile ? '18px' : '20px', fontWeight: '600', color: colors.text, marginBottom: '8px' },
+    scoreDesc: { fontSize: isMobile ? '13px' : '14px', color: colors.textSecondary, marginBottom: '16px' },
+    scoreStats: { display: 'flex', flexWrap: 'wrap', justifyContent: isMobile ? 'center' : 'flex-start', gap: isMobile ? '12px' : '20px' },
     scoreStat: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: colors.textSecondary },
-    securityGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '24px' },
+    securityGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? '16px' : '20px', marginBottom: '24px' },
     securityItem: { background: colors.cardBg, borderRadius: '14px', padding: '24px', border: `1px solid ${colors.border}` },
     itemHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
     itemIcon: { width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },

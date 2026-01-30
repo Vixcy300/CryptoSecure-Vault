@@ -36,8 +36,15 @@ const FilesPage = () => {
     const [showShare, setShowShare] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [contextMenu, setContextMenu] = useState(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors, isDark);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -463,7 +470,7 @@ const FilesPage = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -471,30 +478,33 @@ const getStyles = (colors, isDark) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
     },
     header: {
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '28px',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '16px' : '0',
+        marginBottom: '24px',
     },
     pageTitle: {
-        fontSize: '28px',
+        fontSize: isMobile ? '22px' : '28px',
         fontWeight: '700',
         color: colors.text,
         marginBottom: '4px',
     },
     pageSubtitle: {
-        fontSize: '14px',
+        fontSize: isMobile ? '13px' : '14px',
         color: colors.textSecondary,
     },
     uploadBtn: {
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '8px',
-        padding: '12px 20px',
+        padding: isMobile ? '14px 20px' : '12px 20px',
         background: colors.accent,
         border: 'none',
         borderRadius: '10px',
@@ -502,12 +512,15 @@ const getStyles = (colors, isDark) => ({
         fontSize: '14px',
         fontWeight: '600',
         cursor: 'pointer',
+        width: isMobile ? '100%' : 'auto',
     },
     toolbar: {
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '12px' : '0',
+        marginBottom: '20px',
     },
     searchBox: {
         display: 'flex',
@@ -517,7 +530,7 @@ const getStyles = (colors, isDark) => ({
         background: colors.cardBg,
         borderRadius: '10px',
         border: `1px solid ${colors.border}`,
-        width: '320px',
+        width: isMobile ? '100%' : '320px',
     },
     searchInput: {
         background: 'transparent',
@@ -531,9 +544,10 @@ const getStyles = (colors, isDark) => ({
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        justifyContent: isMobile ? 'space-between' : 'flex-end',
     },
     filterBtn: {
-        display: 'flex',
+        display: isMobile ? 'none' : 'flex',
         alignItems: 'center',
         gap: '6px',
         padding: '10px 16px',

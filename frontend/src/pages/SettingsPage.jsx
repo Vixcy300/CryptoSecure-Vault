@@ -29,8 +29,15 @@ const SettingsPage = () => {
     const [notifications, setNotifications] = useState({ email: true, loginAlerts: true, fileActivity: false });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors, isDark);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -440,7 +447,7 @@ const SettingsPage = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -448,21 +455,21 @@ const getStyles = (colors, isDark) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
-        maxWidth: '900px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
+        maxWidth: isMobile ? '100%' : '900px',
     },
     header: {
-        marginBottom: '32px',
+        marginBottom: '24px',
     },
     pageTitle: {
-        fontSize: '28px',
+        fontSize: isMobile ? '22px' : '28px',
         fontWeight: '700',
         color: colors.text,
         marginBottom: '4px',
     },
     pageSubtitle: {
-        fontSize: '14px',
+        fontSize: isMobile ? '13px' : '14px',
         color: colors.textSecondary,
     },
     userCard: {

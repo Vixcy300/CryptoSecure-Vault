@@ -25,8 +25,15 @@ const ActivityPage = () => {
     const [filter, setFilter] = useState('all');
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors, isDark);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -244,7 +251,7 @@ const ActivityPage = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -252,23 +259,25 @@ const getStyles = (colors, isDark) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
     },
     header: {
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '28px',
+        alignItems: isMobile ? 'stretch' : 'flex-start',
+        gap: isMobile ? '16px' : '0',
+        marginBottom: '24px',
     },
     pageTitle: {
-        fontSize: '28px',
+        fontSize: isMobile ? '22px' : '28px',
         fontWeight: '700',
         color: colors.text,
         marginBottom: '4px',
     },
     pageSubtitle: {
-        fontSize: '14px',
+        fontSize: isMobile ? '13px' : '14px',
         color: colors.textSecondary,
     },
     refreshBtn: {
