@@ -1,33 +1,32 @@
 const { connectDB } = require('../lib/db');
 const { sendFileShareEmail } = require('../lib/email');
-const { verifyToken, jsonResponse, errorResponse, handleOptions } = require('../lib/auth');
+const { verifyToken } = require('../lib/auth');
 const File = require('../lib/models/File');
 const FilePermission = require('../lib/models/FilePermission');
 const User = require('../lib/models/User');
 
-export const config = {
-    runtime: 'nodejs'
-};
+module.exports = async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-export default async function handler(req) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        return res.status(204).end();
     }
 
     if (req.method !== 'POST') {
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
     }
 
     const user = verifyToken(req);
     if (!user) {
-        return errorResponse('Unauthorized', 401);
+        return res.status(401).json({ error: true, message: 'Unauthorized' });
     }
 
     try {
         await connectDB();
 
-        const body = await req.json();
-        const { fileId, targetEmail, encryptedKeyForTarget, permission } = body;
+        const { fileId, targetEmail, encryptedKeyForTarget, permission } = req.body;
 
         // Verify owner permission
         const ownerPerm = await FilePermission.findOne({
@@ -37,12 +36,12 @@ export default async function handler(req) {
         });
 
         if (!ownerPerm) {
-            return errorResponse('Only owner can share files', 403);
+            return res.status(403).json({ error: true, message: 'Only owner can share files' });
         }
 
         const targetUser = await User.findOne({ email: targetEmail });
         if (!targetUser) {
-            return errorResponse('User not found', 404);
+            return res.status(404).json({ error: true, message: 'User not found' });
         }
 
         // Check if already shared
@@ -52,7 +51,7 @@ export default async function handler(req) {
         });
 
         if (existingPerm) {
-            return errorResponse('File already shared with user');
+            return res.status(400).json({ error: true, message: 'File already shared with user' });
         }
 
         await FilePermission.create({
@@ -68,10 +67,10 @@ export default async function handler(req) {
         const ownerUser = await User.findById(user.id);
         sendFileShareEmail(targetEmail, ownerUser.email, file.encryptedName || 'Encrypted File');
 
-        return jsonResponse({ message: 'File shared successfully' });
+        return res.status(200).json({ message: 'File shared successfully' });
 
     } catch (error) {
         console.error('Share error:', error);
-        return errorResponse('Server error during share', 500);
+        return res.status(500).json({ error: true, message: 'Server error during share' });
     }
-}
+};

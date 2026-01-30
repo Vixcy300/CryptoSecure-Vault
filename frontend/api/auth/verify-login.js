@@ -1,31 +1,29 @@
 const { connectDB } = require('../lib/db');
 const { sendLoginAlertEmail } = require('../lib/email');
-const { jsonResponse, errorResponse, handleOptions, generateToken } = require('../lib/auth');
+const { generateToken } = require('../lib/auth');
 const User = require('../lib/models/User');
 const OTP = require('../lib/models/OTP');
 const AuditLog = require('../lib/models/AuditLog');
 
-export const config = {
-    runtime: 'nodejs'
-};
-
-export default async function handler(req) {
+module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        return res.status(204).end();
     }
 
     if (req.method !== 'POST') {
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
     }
 
     try {
         await connectDB();
 
-        const body = await req.json();
-        const { email, otp } = body;
+        const { email, otp } = req.body;
 
         if (!email || !otp) {
-            return errorResponse('Email and OTP required');
+            return res.status(400).json({ error: true, message: 'Email and OTP required' });
         }
 
         const otpRecord = await OTP.findOne({
@@ -36,12 +34,12 @@ export default async function handler(req) {
         });
 
         if (!otpRecord) {
-            return errorResponse('Invalid or expired OTP');
+            return res.status(400).json({ error: true, message: 'Invalid or expired OTP' });
         }
 
         const user = await User.findOne({ email });
         if (!user) {
-            return errorResponse('User not found');
+            return res.status(400).json({ error: true, message: 'User not found' });
         }
 
         const token = generateToken(user);
@@ -51,8 +49,8 @@ export default async function handler(req) {
 
         await OTP.deleteMany({ email, purpose: 'login' });
 
-        const ip = req.headers.get('x-forwarded-for') || 'unknown';
-        const userAgent = req.headers.get('user-agent');
+        const ip = req.headers['x-forwarded-for'] || 'unknown';
+        const userAgent = req.headers['user-agent'];
 
         await AuditLog.create({
             userId: user._id,
@@ -66,7 +64,8 @@ export default async function handler(req) {
             sendLoginAlertEmail(email, ip, userAgent, new Date());
         }
 
-        return jsonResponse({
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(200).json({
             token,
             user: {
                 id: user._id,
@@ -78,6 +77,6 @@ export default async function handler(req) {
 
     } catch (error) {
         console.error('Verify login error:', error);
-        return errorResponse('Server error during verification', 500);
+        return res.status(500).json({ error: true, message: 'Server error during verification' });
     }
-}
+};

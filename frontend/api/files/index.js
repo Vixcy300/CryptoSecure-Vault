@@ -1,24 +1,24 @@
 const { connectDB } = require('../lib/db');
-const { verifyToken, jsonResponse, errorResponse, handleOptions } = require('../lib/auth');
+const { verifyToken } = require('../lib/auth');
 const File = require('../lib/models/File');
 const FilePermission = require('../lib/models/FilePermission');
 
-export const config = {
-    runtime: 'nodejs'
-};
+module.exports = async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-export default async function handler(req) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        return res.status(204).end();
     }
 
     if (req.method !== 'GET') {
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
     }
 
     const user = verifyToken(req);
     if (!user) {
-        return errorResponse('Unauthorized', 401);
+        return res.status(401).json({ error: true, message: 'Unauthorized' });
     }
 
     try {
@@ -58,10 +58,10 @@ export default async function handler(req) {
             };
         }));
 
-        return jsonResponse(files.filter(f => f !== null));
+        return res.status(200).json(files.filter(f => f !== null));
 
     } catch (error) {
         console.error('Get files error:', error);
-        return errorResponse('Server error retrieving files', 500);
+        return res.status(500).json({ error: true, message: 'Server error retrieving files' });
     }
-}
+};

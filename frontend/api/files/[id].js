@@ -1,28 +1,27 @@
 const { connectDB } = require('../lib/db');
 const { getSecureUrl, deleteFromCloudinary } = require('../lib/cloudinary');
-const { verifyToken, jsonResponse, errorResponse, handleOptions } = require('../lib/auth');
+const { verifyToken } = require('../lib/auth');
 const File = require('../lib/models/File');
 const FilePermission = require('../lib/models/FilePermission');
 
-export const config = {
-    runtime: 'nodejs'
-};
+module.exports = async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-export default async function handler(req) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        return res.status(204).end();
     }
 
     const user = verifyToken(req);
     if (!user) {
-        return errorResponse('Unauthorized', 401);
+        return res.status(401).json({ error: true, message: 'Unauthorized' });
     }
 
-    const url = new URL(req.url);
-    const fileId = url.pathname.split('/').pop();
+    const { id: fileId } = req.query;
 
-    if (!fileId || fileId === 'files') {
-        return errorResponse('File ID required');
+    if (!fileId) {
+        return res.status(400).json({ error: true, message: 'File ID required' });
     }
 
     try {
@@ -31,20 +30,20 @@ export default async function handler(req) {
         // Check permission
         const permission = await FilePermission.findOne({ fileId, userId: user.id });
         if (!permission) {
-            return errorResponse('Access denied', 403);
+            return res.status(403).json({ error: true, message: 'Access denied' });
         }
 
         const file = await File.findById(fileId);
         if (!file) {
-            return errorResponse('File not found', 404);
+            return res.status(404).json({ error: true, message: 'File not found' });
         }
 
         // GET - Download file
         if (req.method === 'GET') {
-            // Return secure URL for download
             const downloadUrl = getSecureUrl(file.cloudinaryId);
-            return jsonResponse({
+            return res.status(200).json({
                 downloadUrl,
+                cloudinaryUrl: file.cloudinaryUrl,
                 encryptedName: file.encryptedName,
                 iv: file.iv,
                 encryptedKey: permission.encryptedKey
@@ -54,7 +53,7 @@ export default async function handler(req) {
         // DELETE - Delete file (owner only)
         if (req.method === 'DELETE') {
             if (permission.permission !== 'owner') {
-                return errorResponse('Only owner can delete', 403);
+                return res.status(403).json({ error: true, message: 'Only owner can delete' });
             }
 
             // Delete from Cloudinary
@@ -64,13 +63,13 @@ export default async function handler(req) {
             await FilePermission.deleteMany({ fileId });
             await File.deleteOne({ _id: fileId });
 
-            return jsonResponse({ message: 'File deleted successfully' });
+            return res.status(200).json({ message: 'File deleted successfully' });
         }
 
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
 
     } catch (error) {
         console.error('File operation error:', error);
-        return errorResponse('Server error', 500);
+        return res.status(500).json({ error: true, message: 'Server error' });
     }
-}
+};

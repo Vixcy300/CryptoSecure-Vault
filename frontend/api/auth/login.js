@@ -1,37 +1,35 @@
 const { connectDB } = require('../lib/db');
 const { generateOTP, sendOTPEmail, sendLoginAlertEmail } = require('../lib/email');
-const { jsonResponse, errorResponse, handleOptions, generateToken } = require('../lib/auth');
+const { generateToken } = require('../lib/auth');
 const User = require('../lib/models/User');
 const OTP = require('../lib/models/OTP');
 const AuditLog = require('../lib/models/AuditLog');
 const argon2 = require('argon2');
 
-export const config = {
-    runtime: 'nodejs'
-};
-
-export default async function handler(req) {
+module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        return res.status(204).end();
     }
 
     if (req.method !== 'POST') {
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
     }
 
     try {
         await connectDB();
 
-        const body = await req.json();
-        const { email, password } = body;
+        const { email, password } = req.body;
 
         if (!email || !password) {
-            return errorResponse('Email and password required');
+            return res.status(400).json({ error: true, message: 'Email and password required' });
         }
 
         const user = await User.findOne({ email });
         if (!user) {
-            return errorResponse('Invalid credentials');
+            return res.status(400).json({ error: true, message: 'Invalid credentials' });
         }
 
         // Check password (normal or panic)
@@ -44,15 +42,15 @@ export default async function handler(req) {
                 if (isPanic) {
                     isPanicMode = true;
                 } else {
-                    return errorResponse('Invalid credentials');
+                    return res.status(400).json({ error: true, message: 'Invalid credentials' });
                 }
             } else {
-                return errorResponse('Invalid credentials');
+                return res.status(400).json({ error: true, message: 'Invalid credentials' });
             }
         }
 
-        const ip = req.headers.get('x-forwarded-for') || 'unknown';
-        const userAgent = req.headers.get('user-agent');
+        const ip = req.headers['x-forwarded-for'] || 'unknown';
+        const userAgent = req.headers['user-agent'];
 
         // If 2FA disabled or panic mode, login directly
         if (isPanicMode || !user.twoFactorEnabled) {
@@ -74,7 +72,8 @@ export default async function handler(req) {
                 sendLoginAlertEmail(email, ip, userAgent, new Date());
             }
 
-            return jsonResponse({
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            return res.status(200).json({
                 token,
                 user: {
                     id: user._id,
@@ -100,7 +99,8 @@ export default async function handler(req) {
 
         sendOTPEmail(email, otp, 'login');
 
-        return jsonResponse({
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(200).json({
             message: 'OTP sent to your email',
             email,
             userId: user._id,
@@ -109,6 +109,6 @@ export default async function handler(req) {
 
     } catch (error) {
         console.error('Login error:', error);
-        return errorResponse('Server error during login', 500);
+        return res.status(500).json({ error: true, message: 'Server error during login' });
     }
-}
+};

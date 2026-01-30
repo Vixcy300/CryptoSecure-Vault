@@ -19,6 +19,7 @@
     "cloudinary": "^2.9.0",
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^12.27.5",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",

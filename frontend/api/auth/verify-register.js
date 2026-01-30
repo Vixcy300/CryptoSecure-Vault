@@ -1,30 +1,27 @@
 const { connectDB } = require('../lib/db');
-const { jsonResponse, errorResponse, handleOptions } = require('../lib/auth');
 const User = require('../lib/models/User');
 const OTP = require('../lib/models/OTP');
 const AuditLog = require('../lib/models/AuditLog');
 
-export const config = {
-    runtime: 'nodejs'
-};
-
-export default async function handler(req) {
+module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') {
-        return handleOptions();
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        return res.status(204).end();
     }
 
     if (req.method !== 'POST') {
-        return errorResponse('Method not allowed', 405);
+        return res.status(405).json({ error: true, message: 'Method not allowed' });
     }
 
     try {
         await connectDB();
 
-        const body = await req.json();
-        const { email, otp, pendingData } = body;
+        const { email, otp, pendingData } = req.body;
 
         if (!email || !otp || !pendingData) {
-            return errorResponse('Missing required fields');
+            return res.status(400).json({ error: true, message: 'Missing required fields' });
         }
 
         // Find OTP record
@@ -36,7 +33,7 @@ export default async function handler(req) {
         });
 
         if (!otpRecord) {
-            return errorResponse('Invalid or expired OTP');
+            return res.status(400).json({ error: true, message: 'Invalid or expired OTP' });
         }
 
         // Create user
@@ -56,15 +53,16 @@ export default async function handler(req) {
         await AuditLog.create({
             userId: user._id,
             action: 'user_register',
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: req.headers.get('user-agent'),
+            ipAddress: req.headers['x-forwarded-for'] || 'unknown',
+            userAgent: req.headers['user-agent'],
             success: true
         });
 
-        return jsonResponse({ message: 'Account created successfully. Please sign in.' }, 201);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(201).json({ message: 'Account created successfully. Please sign in.' });
 
     } catch (error) {
         console.error('Verify register error:', error);
-        return errorResponse('Server error during verification', 500);
+        return res.status(500).json({ error: true, message: 'Server error during verification' });
     }
-}
+};
