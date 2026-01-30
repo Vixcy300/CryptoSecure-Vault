@@ -40,7 +40,7 @@ const Login = () => {
 
         try {
             if (isLogin) {
-                const response = await axios.post('/api/auth/login', { email, password });
+                const response = await axios.post('https://cryptosecure-vault-backend.onrender.com/api/auth/login', { email, password });
 
                 if (response.data.requiresOTP) {
                     setStep('otp');
@@ -53,7 +53,7 @@ const Login = () => {
                     navigate('/dashboard');
                 }
             } else {
-                const response = await axios.post('/api/auth/register', {
+                const response = await axios.post('https://cryptosecure-vault-backend.onrender.com/api/auth/register', {
                     username, email, password, panicPassword
                 });
 
@@ -114,7 +114,7 @@ const Login = () => {
             }
 
             if (isLogin) {
-                const response = await axios.post('/api/auth/login/verify', {
+                const response = await axios.post('https://cryptosecure-vault-backend.onrender.com/api/auth/login/verify', {
                     email,
                     otp: otpCode
                 });
@@ -122,7 +122,7 @@ const Login = () => {
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 navigate('/dashboard');
             } else {
-                await axios.post('/api/auth/register/verify', {
+                await axios.post('https://cryptosecure-vault-backend.onrender.com/api/auth/register/verify', {
                     email,
                     otp: otpCode,
                     pendingData
@@ -145,7 +145,7 @@ const Login = () => {
 
         setLoading(true);
         try {
-            await axios.post('/api/auth/resend-otp', {
+            await axios.post('https://cryptosecure-vault-backend.onrender.com/api/auth/resend-otp', {
                 email,
                 purpose: isLogin ? 'login' : 'register'
             });

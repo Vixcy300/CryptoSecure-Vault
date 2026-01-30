@@ -6,7 +6,7 @@ const isProduction = import.meta.env.PROD;
 
 // Base URL for API calls
 // When deployed on Vercel, the API functions are at the same origin
-export const API_BASE_URL = isProduction ? '/api' : '/api';
+export const API_BASE_URL = isProduction ? 'https://cryptosecure-vault-backend.onrender.com/api' : 'https://cryptosecure-vault-backend.onrender.com/api';
 
 // Helper function to get full API URL
 export function getApiUrl(endpoint) {

@@ -33,7 +33,7 @@ const SecurityVerifier = () => {
     const fetchFiles = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('/api/files', {
+            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/files', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setFiles(res.data);
@@ -61,7 +61,7 @@ const SecurityVerifier = () => {
             setZkpStatus('verifying');
             addLog('Sending ONLY proof to server (Secret remains in browser)...', 'warn');
 
-            const res = await axios.post('/api/zkp/verify', {
+            const res = await axios.post('https://cryptosecure-vault-backend.onrender.com/api/zkp/verify', {
                 proof,
                 publicSignals
             });

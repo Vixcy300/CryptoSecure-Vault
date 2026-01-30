@@ -41,7 +41,7 @@ const SharedPage = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('/api/files', {
+            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/files', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // Robust filtering
