@@ -180,6 +180,24 @@ const Login = () => {
                 {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
+            {/* Mobile Logo Header */}
+            {isMobile && (
+                <motion.div
+                    style={styles.mobileLogoHeader}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <motion.div
+                        style={styles.mobileLogo}
+                        animate={{ rotate: [0, 5, -5, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                    >
+                        <Lock size={24} color="#10b981" />
+                    </motion.div>
+                    <span style={styles.mobileLogoText}>CryptoSecure</span>
+                </motion.div>
+            )}
+
             {/* Left Side - Branding */}
             <div style={styles.leftPanel}>
                 <div style={styles.brandSection}>
@@ -659,19 +677,44 @@ const getStyles = (colors, isDark, isMobile) => ({
         fontSize: '13px',
     },
     submitBtn: {
-        padding: '14px',
-        background: colors.accent,
+        padding: '16px',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
         border: 'none',
-        borderRadius: '10px',
+        borderRadius: '12px',
         color: '#ffffff',
-        fontSize: '14px',
+        fontSize: '15px',
         fontWeight: '600',
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.3s ease',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '48px',
+        minHeight: '52px',
+        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+    },
+    mobileLogoHeader: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        zIndex: 10,
+    },
+    mobileLogo: {
+        width: '40px',
+        height: '40px',
+        background: 'rgba(16, 185, 129, 0.15)',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '1px solid rgba(16, 185, 129, 0.3)',
+    },
+    mobileLogoText: {
+        fontSize: '16px',
+        fontWeight: '600',
+        color: colors.text,
     },
     spinner: {
         width: '20px',

@@ -25,8 +25,15 @@ const Dashboard = () => {
     const [showUpload, setShowUpload] = useState(false);
     const [activityData, setActivityData] = useState([]);
     const [recentActivity, setRecentActivity] = useState([]);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const styles = getStyles(colors);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isMobile);
 
     const securityData = [
         { name: 'Encrypted', value: 100, color: colors.success },
@@ -357,7 +364,7 @@ const Dashboard = () => {
     );
 };
 
-const getStyles = (colors) => ({
+const getStyles = (colors, isMobile) => ({
     layout: {
         display: 'flex',
         minHeight: '100vh',
@@ -365,30 +372,34 @@ const getStyles = (colors) => ({
     },
     main: {
         flex: 1,
-        marginLeft: '260px',
-        padding: '32px 40px',
+        marginLeft: isMobile ? 0 : '260px',
+        padding: isMobile ? '76px 16px 24px 16px' : '32px 40px',
+        paddingTop: isMobile ? '76px' : '32px', // Account for mobile header
     },
     header: {
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '32px',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? '16px' : '0',
+        marginBottom: '24px',
     },
     pageTitle: {
-        fontSize: '28px',
+        fontSize: isMobile ? '22px' : '28px',
         fontWeight: '700',
         color: colors.text,
         marginBottom: '4px',
     },
     pageSubtitle: {
-        fontSize: '14px',
+        fontSize: isMobile ? '13px' : '14px',
         color: colors.textSecondary,
     },
     uploadBtn: {
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '8px',
-        padding: '12px 20px',
+        padding: isMobile ? '14px 20px' : '12px 20px',
         background: colors.accent,
         border: 'none',
         borderRadius: '10px',
@@ -396,24 +407,27 @@ const getStyles = (colors) => ({
         fontSize: '14px',
         fontWeight: '600',
         cursor: 'pointer',
+        width: isMobile ? '100%' : 'auto',
     },
     statsGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        marginBottom: '32px',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '12px' : '20px',
+        marginBottom: '24px',
     },
     statCard: {
         borderRadius: '14px',
-        padding: '20px',
+        padding: isMobile ? '16px' : '20px',
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: '16px',
+        alignItems: isMobile ? 'center' : 'flex-start',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '8px' : '16px',
         position: 'relative',
+        textAlign: isMobile ? 'center' : 'left',
     },
     statIcon: {
-        width: '44px',
-        height: '44px',
+        width: isMobile ? '40px' : '44px',
+        height: isMobile ? '40px' : '44px',
         borderRadius: '12px',
         display: 'flex',
         alignItems: 'center',
@@ -424,30 +438,31 @@ const getStyles = (colors) => ({
         flexDirection: 'column',
     },
     statValue: {
-        fontSize: '24px',
+        fontSize: isMobile ? '20px' : '24px',
         fontWeight: '700',
         color: colors.text,
     },
     statLabel: {
-        fontSize: '13px',
+        fontSize: isMobile ? '11px' : '13px',
         color: colors.textSecondary,
     },
     statChange: {
-        position: 'absolute',
+        position: isMobile ? 'static' : 'absolute',
         top: '20px',
         right: '20px',
-        fontSize: '12px',
+        fontSize: isMobile ? '10px' : '12px',
         fontWeight: '500',
+        marginTop: isMobile ? '4px' : 0,
     },
     chartsRow: {
         display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: '20px',
-        marginBottom: '32px',
+        gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
+        gap: isMobile ? '16px' : '20px',
+        marginBottom: '24px',
     },
     chartCard: {
         borderRadius: '14px',
-        padding: '24px',
+        padding: isMobile ? '16px' : '24px',
     },
     chartCardSmall: {
         borderRadius: '14px',
