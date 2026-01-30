@@ -7,7 +7,15 @@ import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
     const { colors, isDark, toggleTheme } = useTheme();
-    const styles = getStyles(colors, isDark);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const styles = getStyles(colors, isDark, isMobile);
 
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -417,17 +425,18 @@ const Login = () => {
     );
 };
 
-const getStyles = (colors, isDark) => ({
+const getStyles = (colors, isDark, isMobile) => ({
     container: {
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         minHeight: '100vh',
-        background: 'transparent', // Allow LiveBackground to show
+        background: 'transparent',
         position: 'relative',
     },
     themeToggle: {
         position: 'absolute',
-        top: '24px',
-        right: '24px',
+        top: isMobile ? '16px' : '24px',
+        right: isMobile ? '16px' : '24px',
         width: '40px',
         height: '40px',
         borderRadius: '12px',
@@ -442,9 +451,9 @@ const getStyles = (colors, isDark) => ({
         zIndex: 10,
     },
     leftPanel: {
+        display: isMobile ? 'none' : 'flex',
         flex: 1,
         padding: '60px',
-        display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.4)',
@@ -453,16 +462,17 @@ const getStyles = (colors, isDark) => ({
         position: 'relative',
         zIndex: 2,
     },
-    // ...
     rightPanel: {
         flex: 1,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px',
-        background: 'transparent',
+        padding: isMobile ? '24px 16px' : '40px',
+        background: isMobile ? (isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)') : 'transparent',
+        backdropFilter: isMobile ? 'blur(20px)' : 'none',
         position: 'relative',
         zIndex: 2,
+        minHeight: isMobile ? '100vh' : 'auto',
     },
     brandSection: {
         marginBottom: '48px',
@@ -534,17 +544,9 @@ const getStyles = (colors, isDark) => ({
         color: colors.textSecondary,
         border: `1px solid ${colors.border}`,
     },
-    rightPanel: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px',
-        background: 'transparent',
-    },
     formCard: {
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: isMobile ? '100%' : '420px',
     },
     backBtn: {
         display: 'flex',
