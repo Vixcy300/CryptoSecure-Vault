@@ -67,7 +67,7 @@ const UploadModal = ({ onClose, onUploadComplete }) => {
             formData.append('encryptedKey', encryptedKey);
 
             const token = localStorage.getItem('token');
-            await axios.post('https://cryptosecure-vault-backend.onrender.com/api/files/upload', formData, {
+            await axios.post('/api/files/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${token}`

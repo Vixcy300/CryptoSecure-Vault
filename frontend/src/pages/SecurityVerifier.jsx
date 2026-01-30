@@ -33,7 +33,7 @@ const SecurityVerifier = () => {
     const fetchFiles = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/files', {
+            const res = await axios.get('/api/files', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setFiles(res.data);
@@ -61,7 +61,7 @@ const SecurityVerifier = () => {
             setZkpStatus('verifying');
             addLog('Sending ONLY proof to server (Secret remains in browser)...', 'warn');
 
-            const res = await axios.post('https://cryptosecure-vault-backend.onrender.com/api/zkp/verify', {
+            const res = await axios.post('/api/zkp/verify', {
                 proof,
                 publicSignals
             });
@@ -90,7 +90,7 @@ const SecurityVerifier = () => {
             const token = localStorage.getItem('token');
 
             // 1. Get Encrypted Blob (Raw)
-            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${selectedFile.id}/download`, {
+            const res = await axios.get(`/api/files/${selectedFile.id}/download`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'arraybuffer' // Get raw bytes
             });

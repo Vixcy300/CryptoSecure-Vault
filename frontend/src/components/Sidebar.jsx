@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -11,7 +11,9 @@ import {
     LogOut,
     ChevronRight,
     CheckCircle,
-    Image
+    Image,
+    Menu,
+    X
 } from 'lucide-react';
 import { secureLogout } from '../utils/logout';
 import { useTheme } from '../context/ThemeContext';
@@ -21,7 +23,24 @@ const Sidebar = ({ user, onLogout }) => {
     const { colors } = useTheme();
     const { t } = useLanguage();
     const location = useLocation();
-    const styles = getStyles(colors);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (!mobile) setIsMobileMenuOpen(false);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Close menu on route change
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [location.pathname]);
 
     const handleSecureLogout = () => {
         if (onLogout) onLogout();
@@ -34,25 +53,29 @@ const Sidebar = ({ user, onLogout }) => {
         { path: '/shared', icon: Share2, label: t('shared'), key: 'shared' },
         { path: '/activity', icon: Activity, label: t('activity'), key: 'activity' },
         { path: '/security', icon: Shield, label: t('security'), key: 'security' },
-        { path: '/steganography', icon: Image, label: 'Steganography Lab', key: 'stego' },
-        { path: '/verify', icon: CheckCircle, label: 'Verification Lab', key: 'verify' },
+        { path: '/steganography', icon: Image, label: 'Stego Lab', key: 'stego' },
+        { path: '/verify', icon: CheckCircle, label: 'Verify Lab', key: 'verify' },
     ];
 
-    // PANIC MODE: Hide sensitive sections to look like a fresh/empty account
     if (user?.isPanicMode) {
         navItems = navItems.filter(item => ['dashboard', 'myFiles', 'settings'].includes(item.key));
     }
 
-    const isActive = (path) => location.pathname === path;
+    const styles = getStyles(colors, isMobile, isMobileMenuOpen);
 
-    return (
-        <div style={styles.sidebar}>
+    const SidebarContent = () => (
+        <>
             {/* Logo */}
             <div style={styles.logoSection}>
                 <div style={styles.logoIcon}>
                     <Lock size={20} color={colors.accent} />
                 </div>
                 <span style={styles.logoText}>CryptoSecure</span>
+                {isMobile && (
+                    <button onClick={() => setIsMobileMenuOpen(false)} style={styles.closeBtn}>
+                        <X size={24} />
+                    </button>
+                )}
             </div>
 
             {/* Navigation */}
@@ -70,7 +93,7 @@ const Sidebar = ({ user, onLogout }) => {
                         >
                             <item.icon size={18} />
                             <span>{item.label}</span>
-                            {isActive(item.path) && <ChevronRight size={16} style={styles.chevron} />}
+                            {location.pathname === item.path && <ChevronRight size={16} style={styles.chevron} />}
                         </NavLink>
                     ))}
                 </div>
@@ -118,22 +141,108 @@ const Sidebar = ({ user, onLogout }) => {
                     <LogOut size={18} />
                 </button>
             </div>
-        </div>
+        </>
+    );
+
+    return (
+        <>
+            {/* Mobile Header Bar */}
+            {isMobile && (
+                <div style={styles.mobileHeader}>
+                    <button onClick={() => setIsMobileMenuOpen(true)} style={styles.hamburger}>
+                        <Menu size={24} color={colors.text} />
+                    </button>
+                    <div style={styles.mobileLogoSection}>
+                        <Lock size={18} color={colors.accent} />
+                        <span style={styles.mobileLogoText}>CryptoSecure</span>
+                    </div>
+                    <div style={{ width: 48 }} /> {/* Spacer for centering */}
+                </div>
+            )}
+
+            {/* Overlay for mobile */}
+            {isMobile && isMobileMenuOpen && (
+                <div style={styles.overlay} onClick={() => setIsMobileMenuOpen(false)} />
+            )}
+
+            {/* Sidebar */}
+            <div style={styles.sidebar}>
+                <SidebarContent />
+            </div>
+        </>
     );
 };
 
-const getStyles = (colors) => ({
+const getStyles = (colors, isMobile, isOpen) => ({
     sidebar: {
-        width: '260px',
+        width: isMobile ? '280px' : '260px',
         height: '100vh',
         background: colors.cardBg,
         borderRight: `1px solid ${colors.border}`,
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
-        left: 0,
+        left: isMobile ? (isOpen ? 0 : '-300px') : 0,
         top: 0,
-        zIndex: 100,
+        zIndex: 1000,
+        transition: 'left 0.3s ease',
+        boxShadow: isMobile && isOpen ? '4px 0 20px rgba(0,0,0,0.3)' : 'none',
+    },
+    mobileHeader: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60px',
+        background: colors.cardBg,
+        borderBottom: `1px solid ${colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
+        zIndex: 999,
+    },
+    hamburger: {
+        width: '48px',
+        height: '48px',
+        border: 'none',
+        background: 'transparent',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '12px',
+    },
+    mobileLogoSection: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
+    mobileLogoText: {
+        fontSize: '16px',
+        fontWeight: '600',
+        color: colors.text,
+    },
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        zIndex: 999,
+    },
+    closeBtn: {
+        marginLeft: 'auto',
+        width: '40px',
+        height: '40px',
+        border: 'none',
+        background: 'transparent',
+        color: colors.textMuted,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     logoSection: {
         padding: '24px 20px',
@@ -177,7 +286,7 @@ const getStyles = (colors) => ({
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        padding: '12px',
+        padding: '14px 12px', // Increased touch target
         borderRadius: '10px',
         color: colors.textSecondary,
         textDecoration: 'none',
@@ -185,6 +294,7 @@ const getStyles = (colors) => ({
         fontWeight: '500',
         transition: 'all 0.2s ease',
         marginBottom: '4px',
+        minHeight: '48px', // Minimum touch target
     },
     navItemActive: {
         background: colors.accentBg,
@@ -206,8 +316,8 @@ const getStyles = (colors) => ({
         gap: '12px',
     },
     avatar: {
-        width: '36px',
-        height: '36px',
+        width: '40px',
+        height: '40px',
         borderRadius: '10px',
         background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
         display: 'flex',
@@ -232,8 +342,8 @@ const getStyles = (colors) => ({
         textTransform: 'capitalize',
     },
     logoutBtn: {
-        width: '36px',
-        height: '36px',
+        width: '48px', // Increased touch target
+        height: '48px',
         borderRadius: '10px',
         border: 'none',
         background: colors.name === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.05)',

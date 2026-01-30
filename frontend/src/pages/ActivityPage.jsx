@@ -38,7 +38,7 @@ const ActivityPage = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('https://cryptosecure-vault-backend.onrender.com/api/logs', {
+            const res = await axios.get('/api/logs', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

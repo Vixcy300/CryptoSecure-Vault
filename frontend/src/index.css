@@ -186,3 +186,158 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* ===============================
+   RESPONSIVE / MOBILE STYLES
+   =============================== */
+
+/* Mobile container padding adjustment */
+.main-content {
+  padding-left: 260px;
+  /* Sidebar width on desktop */
+  transition: padding-left 0.3s ease;
+}
+
+/* Touch-friendly minimum sizes */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+.clickable {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile breakpoint - tablets and phones */
+@media (max-width: 768px) {
+  .main-content {
+    padding-left: 0 !important;
+    padding-top: 60px;
+    /* Mobile header height */
+  }
+
+  /* Stack grids on mobile */
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Full width cards on mobile */
+  .responsive-card {
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+  }
+
+  /* Larger touch targets on mobile */
+  button,
+  a.btn {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+
+  /* Better form inputs on mobile */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    /* Prevents iOS zoom */
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Stack flex containers */
+  .flex-column-mobile {
+    flex-direction: column !important;
+  }
+
+  /* Full width buttons on mobile */
+  .btn-full-mobile {
+    width: 100% !important;
+  }
+
+  /* Reduce padding on mobile */
+  .container-mobile {
+    padding: 16px !important;
+  }
+
+  /* Responsive text sizes */
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  h3 {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 60px 12px 80px 12px;
+  }
+
+  /* Extra small padding */
+  .container-mobile {
+    padding: 12px !important;
+  }
+
+  /* Hide overflow text */
+  .truncate-mobile {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Safe area for notched devices (iPhone X, etc.) */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-top {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+}
+
+/* Desktop-only styles */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode preference detection (backup) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

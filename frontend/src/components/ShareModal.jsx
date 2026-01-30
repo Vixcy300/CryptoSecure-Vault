@@ -36,7 +36,7 @@ const ShareModal = ({ file, onClose }) => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('https://cryptosecure-vault-backend.onrender.com/api/files/share', {
+            await axios.post('/api/files/share', {
                 fileId: file.id,
                 targetEmail: email,
                 encryptedKeyForTarget: file.encryptedKey,

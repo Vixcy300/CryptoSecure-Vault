@@ -25,7 +25,7 @@ export const generateZKPProof = async (secret, publicSignals) => {
 
 export const verifyProofOnServer = async (proof, publicSignals) => {
     try {
-        const response = await fetch('https://cryptosecure-vault-backend.onrender.com/api/zkp/verify', {
+        const response = await fetch('/api/zkp/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ proof, publicSignals })

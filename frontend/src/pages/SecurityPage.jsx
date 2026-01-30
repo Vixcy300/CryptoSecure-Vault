@@ -58,7 +58,7 @@ const SecurityPage = () => {
         const newVal = !twoFactorEnabled;
         try {
             const token = localStorage.getItem('token');
-            await axios.put('https://cryptosecure-vault-backend.onrender.com/api/auth/update-security',
+            await axios.put('/api/auth/update-security',
                 { twoFactorEnabled: newVal },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -124,7 +124,7 @@ const SecurityPage = () => {
         const newVal = !loginAlertsEnabled;
         try {
             const token = localStorage.getItem('token');
-            await axios.put('https://cryptosecure-vault-backend.onrender.com/api/auth/update-security',
+            await axios.put('/api/auth/update-security',
                 { loginAlertsEnabled: newVal },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
