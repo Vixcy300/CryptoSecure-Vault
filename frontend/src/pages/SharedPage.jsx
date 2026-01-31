@@ -117,7 +117,7 @@ const SharedPage = () => {
             }
 
             // 2. Download the encrypted blob
-            const res = await axios.get(`/api/files/${file.id}`, {
+            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${file.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
@@ -166,7 +166,7 @@ const SharedPage = () => {
             }
 
             // 2. Download the encrypted blob
-            const res = await axios.get(`/api/files/${file.id}/download`, {
+            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${file.id}/download`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });

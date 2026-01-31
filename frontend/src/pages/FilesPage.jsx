@@ -126,7 +126,7 @@ const FilesPage = () => {
             }
 
             // 2. Download the encrypted blob
-            const res = await axios.get(`/api/files/${file.id}`, {
+            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${file.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
@@ -148,18 +148,28 @@ const FilesPage = () => {
             const token = localStorage.getItem('token');
 
             // Debug: Log the encryptedKey to understand its format
+            console.log('=== DOWNLOAD DEBUG START ===');
             console.log('Encrypted Key Type:', typeof file.encryptedKey);
-            console.log('Encrypted Key Value:', file.encryptedKey?.substring?.(0, 50) || file.encryptedKey);
+            console.log('Encrypted Key Full:', file.encryptedKey);
 
-            // 1. Get the encrypted key and iv with robust parsing
+            // 1. Parse the encrypted key
             let rawKeyArray;
             try {
-                // Try standard base64-encoded JSON first
+                // Decode base64 to get the JSON string
                 const decoded = atob(file.encryptedKey);
+                console.log('Decoded key string:', decoded);
+
+                // Parse JSON to get the key array
                 rawKeyArray = JSON.parse(decoded);
+                console.log('Parsed key array length:', rawKeyArray.length);
+                console.log('Key array (first 10 bytes):', rawKeyArray.slice(0, 10));
+
+                // AES-256 requires exactly 32 bytes
+                if (rawKeyArray.length !== 32) {
+                    console.error('Invalid key length! Expected 32, got:', rawKeyArray.length);
+                }
             } catch (parseErr) {
-                console.error('Failed to parse key as base64 JSON:', parseErr);
-                // If it's already a parsed object (from some edge case)
+                console.error('Failed to parse key:', parseErr);
                 if (typeof file.encryptedKey === 'object') {
                     rawKeyArray = file.encryptedKey;
                 } else {
@@ -167,27 +177,46 @@ const FilesPage = () => {
                 }
             }
 
+            // 2. Import the AES key
+            console.log('Importing AES key...');
             const aesKey = await importKey(rawKeyArray);
+            console.log('AES key imported successfully');
 
+            // 3. Parse IV
             let iv;
             try {
+                console.log('IV raw value:', file.iv);
+                console.log('IV type:', typeof file.iv);
                 iv = typeof file.iv === 'string' ? JSON.parse(file.iv) : file.iv;
+                console.log('Parsed IV length:', iv.length);
+                console.log('IV (first 6 bytes):', iv.slice(0, 6));
+
+                // AES-GCM IV should be 12 bytes
+                if (iv.length !== 12) {
+                    console.error('Invalid IV length! Expected 12, got:', iv.length);
+                }
             } catch (ivErr) {
                 console.error('Failed to parse IV:', ivErr);
                 throw new Error('Unable to parse IV. File metadata may be corrupted.');
             }
 
-            // 2. Download the encrypted blob
-            const res = await axios.get(`/api/files/${file.id}/download`, {
+            // 4. Download the encrypted blob
+            console.log('Downloading encrypted file from server...');
+            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${file.id}/download`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
+            console.log('Downloaded blob size:', res.data.size);
+            console.log('Downloaded blob type:', res.data.type);
 
-            // 3. Decrypt the blob
+            // 5. Decrypt the blob
+            console.log('Starting decryption...');
             const decryptedBlob = await decryptFile(res.data, aesKey, iv);
+            console.log('Decryption successful! Decrypted size:', decryptedBlob.size);
+
             const url = URL.createObjectURL(decryptedBlob);
 
-            // 4. Get original name with Unicode-safe decoding
+            // 6. Get original name with Unicode-safe decoding
             const fromBase64 = (str) => {
                 const binary = atob(str);
                 const bytes = new Uint8Array(binary.length);
@@ -197,6 +226,7 @@ const FilesPage = () => {
                 return new TextDecoder().decode(bytes);
             };
             const originalName = fromBase64(file.encryptedName);
+            console.log('Original filename:', originalName);
 
             const a = document.createElement('a');
             a.href = url;
@@ -205,9 +235,14 @@ const FilesPage = () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+
+            console.log('=== DOWNLOAD SUCCESS ===');
         } catch (err) {
+            console.error('=== DOWNLOAD ERROR ===');
+            console.error('Error name:', err.name);
+            console.error('Error message:', err.message);
+            console.error('Full error:', err);
             alert('Failed to download file: ' + (err.message || 'Unknown error'));
-            console.error('Download error:', err);
         }
     };
 
@@ -218,7 +253,7 @@ const FilesPage = () => {
         }
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`/api/files/${file.id}`, {
+            await axios.delete(`https://cryptosecure-vault-backend.onrender.com/api/files/${file.id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchFiles();

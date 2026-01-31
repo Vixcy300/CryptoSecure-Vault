@@ -97,7 +97,7 @@ const SecurityVerifier = () => {
             const token = localStorage.getItem('token');
 
             // 1. Get Encrypted Blob (Raw)
-            const res = await axios.get(`/api/files/${selectedFile.id}/download`, {
+            const res = await axios.get(`https://cryptosecure-vault-backend.onrender.com/api/files/${selectedFile.id}/download`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'arraybuffer' // Get raw bytes
             });
