@@ -1,14 +1,14 @@
 const nodemailer = require('nodemailer');
 
-// Gmail SMTP configuration with direct credentials
+// Gmail SMTP configuration using environment variables
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     host: 'smtp.gmail.com',
     port: 587,
     secure: false,
     auth: {
-        user: 'contactigtyt@gmail.com',
-        pass: 'unltveivyxgbzmsm'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     },
     tls: {
         rejectUnauthorized: false
